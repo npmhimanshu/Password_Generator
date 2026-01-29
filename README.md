@@ -2,6 +2,16 @@
 ---
 Dark UI + History + Flask Backend + Project Report
 
+🧩 TECH STACK
+--
+Frontend: HTML, CSS (Dark Mode)
+
+Backend: Python (Flask)
+
+Storage: SQLite (password history)
+
+Security Logic: random, string
+
 1️⃣ PROJECT OVERVIEW
 ---
 Project Title: Password Generator
@@ -190,6 +200,7 @@ Python Documentation
 Flask Official Documentation
 
 SQLite Documentation
+
 
 
 
