@@ -57,14 +57,21 @@ User → Frontend (HTML/CSS) → Flask Backend → Password Logic → SQLite Dat
 ---
 Password_Generator/
 │
+
 ├── app.py
+
 ├── passwords.db
+
 │
 ├── templates/
+
 │   └── index.html
 │
+
 ├── static/
+
 │   └── style.css
+
 │
 └── README.txt
 
@@ -183,5 +190,6 @@ Python Documentation
 Flask Official Documentation
 
 SQLite Documentation
+
 
 
