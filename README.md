@@ -66,8 +66,8 @@ Password_Generator/
 ├── templates/
 
 │   └── index.html
-│
 
+│
 ├── static/
 
 │   └── style.css
@@ -190,6 +190,7 @@ Python Documentation
 Flask Official Documentation
 
 SQLite Documentation
+
 
 
 
