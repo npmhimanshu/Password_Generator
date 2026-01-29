@@ -78,7 +78,7 @@ Password_Generator/
 7️⃣ MODULE DESCRIPTION
 ---
 7.1 Frontend Module
-
+-
 Dark mode UI
 
 Input fields for password length
@@ -90,7 +90,7 @@ Displays generated password
 Shows password history
 
 7.2 Backend Module (Flask)
-
+-
 Handles user requests
 
 Generates password using Python logic
@@ -100,7 +100,7 @@ Stores password in database
 Fetches password history
 
 7.3 Database Module (SQLite)
-
+-
 Stores generated passwords
 
 Maintains last 5 password records
@@ -190,6 +190,7 @@ Python Documentation
 Flask Official Documentation
 
 SQLite Documentation
+
 
 
 
