@@ -1,5 +1,5 @@
 🔐 Password Generator – Full Stack Minor Project
-
+---
 Dark UI + History + Flask Backend + Project Report
 
 1️⃣ PROJECT OVERVIEW
@@ -183,4 +183,5 @@ Python Documentation
 Flask Official Documentation
 
 SQLite Documentation
+
 
