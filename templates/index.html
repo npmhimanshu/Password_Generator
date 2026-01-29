@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Password Generator</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="container">
+    <h1>🔐 Password Generator</h1>
+
+    <form method="POST">
+        <label>Password Length</label>
+        <input type="number" name="length" min="6" max="32" value="12" required>
+
+        <div class="options">
+            <label><input type="checkbox" name="upper" checked> Uppercase</label>
+            <label><input type="checkbox" name="lower" checked> Lowercase</label>
+            <label><input type="checkbox" name="digits" checked> Numbers</label>
+            <label><input type="checkbox" name="symbols" checked> Symbols</label>
+        </div>
+
+        <button type="submit">Generate Password</button>
+    </form>
+
+    {% if password %}
+        <div class="result">
+            <p>{{ password }}</p>
+        </div>
+    {% endif %}
+
+    <h2>Password History</h2>
+    <ul>
+        {% for p in history %}
+            <li>{{ p }}</li>
+        {% endfor %}
+    </ul>
+</div>
+</body>
+</html>

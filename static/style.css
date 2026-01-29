@@ -1,0 +1,46 @@
+body {
+    background-color: #121212;
+    font-family: Arial;
+    color: #fff;
+}
+
+.container {
+    width: 400px;
+    margin: auto;
+    margin-top: 40px;
+    background: #1e1e1e;
+    padding: 20px;
+    border-radius: 10px;
+}
+
+h1, h2 {
+    text-align: center;
+}
+
+input, button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 8px;
+    background: #2a2a2a;
+    color: white;
+    border: none;
+    border-radius: 5px;
+}
+
+button {
+    background: #4CAF50;
+    cursor: pointer;
+}
+
+.result {
+    background: #333;
+    padding: 10px;
+    margin-top: 10px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.options label {
+    display: block;
+    margin-top: 5px;
+}
