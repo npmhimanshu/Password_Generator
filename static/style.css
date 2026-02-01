@@ -1,62 +1,24 @@
-body {
-    background-color: #121212;
-    color: #ffffff;
-    font-family: Arial, sans-serif;
-}
+body.light { background: #f3f4f6; color: #111; }
+body.dark { background: #111827; color: #e5e7eb; }
 
-.container {
-    width: 400px;
-    margin: 50px auto;
-    padding: 25px;
-    background-color: #1e1e1e;
-    border-radius: 10px;
-}
+.container { width: 400px; margin: 50px auto; padding: 20px; background: #1f2937; border-radius: 12px; }
 
-h1 {
-    text-align: center;
-    color: #00ffcc;
-}
+body.light .container { background: #fff; }
 
-label {
-    display: block;
-    margin-top: 10px;
-}
+h1 { text-align: center; }
 
-input[type="number"] {
-    width: 100%;
-    padding: 8px;
-    margin-top: 5px;
-    background: #2c2c2c;
-    border: none;
-    color: white;
-}
+input[type=number] { width: 60px; }
 
-.options label {
-    margin-top: 5px;
-}
+.options label { display: block; margin: 5px 0; }
 
-button {
-    width: 100%;
-    padding: 10px;
-    margin-top: 15px;
-    background: #00ffcc;
-    border: none;
-    cursor: pointer;
-    font-size: 16px;
-}
+button { margin: 5px 5px 5px 0; padding: 8px; cursor: pointer; }
 
-button:hover {
-    background: #00ccaa;
-}
+.password { font-size: 1.2rem; word-break: break-all; }
 
-.output, .history {
-    margin-top: 20px;
-    padding: 10px;
-    background: #2c2c2c;
-    border-radius: 5px;
-}
+.hidden { filter: blur(6px); }
 
-ul {
-    list-style: none;
-    padding: 0;
-}
+.actions { display: flex; gap: 10px; margin-top: 10px; }
+
+.weak { color: #ef4444; }
+.medium { color: #f59e0b; }
+.strong { color: #22c55e; }
