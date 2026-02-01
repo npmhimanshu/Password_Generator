@@ -2,12 +2,14 @@ from flask import Flask, render_template, request, jsonify
 import secrets
 import string
 import sqlite3
+import math
 
 app = Flask(__name__)
+DB_NAME = "passwords.db"
 
 # ---------- DATABASE ----------
 def get_db():
-    return sqlite3.connect("passwords.db")
+    return sqlite3.connect(DB_NAME)
 
 def init_db():
     with get_db() as conn:
@@ -45,7 +47,7 @@ def generate_password(length, upper, lower, digits, symbols, exclude_similar):
 
     all_chars = "".join(sets)
 
-    # Enforce at least one from each selected set
+    # Ensure at least one from each selected set
     password = [secrets.choice(s) for s in sets]
 
     while len(password) < length:
@@ -63,78 +65,64 @@ def password_strength(pwd):
     if any(c.isdigit() for c in pwd): score += 1
     if any(not c.isalnum() for c in pwd): score += 1
 
-    if score <= 2:
-        return "Weak"
-    elif score <= 4:
-        return "Medium"
-    else:
-        return "Strong"
+    if score <= 2: return "Weak"
+    elif score <= 4: return "Medium"
+    return "Strong"
+
+def password_entropy(pwd, upper, lower, digits, symbols):
+    pool = 0
+    if upper: pool += len(string.ascii_uppercase)
+    if lower: pool += len(string.ascii_lowercase)
+    if digits: pool += len(string.digits)
+    if symbols: pool += len(string.punctuation)
+    if pool == 0: return 0
+    return round(math.log2(pool ** len(pwd)), 2)
 
 # ---------- ROUTES ----------
-@app.route("/", methods=["GET", "POST"])
+@app.route("/")
 def index():
-    password = ""
-    strength = ""
-    history = []
+    return render_template("index.html")
 
-    if request.method == "POST":
-        length = int(request.form.get("length", 12))
-
-        password = generate_password(
-            length,
-            "upper" in request.form,
-            "lower" in request.form,
-            "digits" in request.form,
-            "symbols" in request.form,
-            "exclude" in request.form
-        )
-
-        if password:
-            strength = password_strength(password)
-
-            with get_db() as conn:
-                conn.execute(
-                    "INSERT INTO passwords (password) VALUES (?)",
-                    (password,)
-                )
-
-                # Keep only last 5 passwords
-                conn.execute("""
-                    DELETE FROM passwords
-                    WHERE id NOT IN (
-                        SELECT id FROM passwords ORDER BY id DESC LIMIT 5
-                    )
-                """)
-
-    with get_db() as conn:
-        history = conn.execute(
-            "SELECT password FROM passwords ORDER BY id DESC"
-        ).fetchall()
-
-    return render_template(
-        "index.html",
-        password=password,
-        strength=strength,
-        history=history
-    )
-
-# ---------- OPTIONAL API ----------
-@app.route("/api/generate", methods=["POST"])
-def api_generate():
+@app.route("/generate", methods=["POST"])
+def generate_api():
     data = request.json
 
-    pwd = generate_password(
-        data["length"],
-        data["uppercase"],
-        data["lowercase"],
-        data["digits"],
-        data["symbols"],
+    password = generate_password(
+        data.get("length", 12),
+        data.get("upper", True),
+        data.get("lower", True),
+        data.get("digits", True),
+        data.get("symbols", False),
         data.get("excludeSimilar", False)
     )
 
+    strength = password_strength(password)
+    entropy = password_entropy(
+        password,
+        data.get("upper", True),
+        data.get("lower", True),
+        data.get("digits", True),
+        data.get("symbols", False)
+    )
+
+    # Save and maintain history
+    with get_db() as conn:
+        conn.execute("INSERT INTO passwords (password) VALUES (?)", (password,))
+        conn.execute("""
+            DELETE FROM passwords
+            WHERE id NOT IN (
+                SELECT id FROM passwords ORDER BY id DESC LIMIT 5
+            )
+        """)
+        history = conn.execute(
+            "SELECT password FROM passwords ORDER BY id DESC LIMIT 5"
+        ).fetchall()
+
     return jsonify({
-        "password": pwd,
-        "strength": password_strength(pwd)
+        "password": password,
+        "strength": strength,
+        "entropy": entropy,
+        "history": [h[0] for h in history]
     })
 
 # ---------- RUN ----------
