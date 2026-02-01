@@ -1,79 +1,142 @@
-from flask import Flask, render_template, request
-import random
+from flask import Flask, render_template, request, jsonify
+import secrets
 import string
 import sqlite3
 
 app = Flask(__name__)
 
-# Database setup
+# ---------- DATABASE ----------
+def get_db():
+    return sqlite3.connect("passwords.db")
+
 def init_db():
-    conn = sqlite3.connect("passwords.db")
-    cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS passwords (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            password TEXT
-        )
-    """)
-    conn.commit()
-    conn.close()
+    with get_db() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS passwords (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                password TEXT
+            )
+        """)
 
 init_db()
 
-def generate_password(length, use_upper, use_lower, use_digits, use_symbols):
-    chars = ""
-    if use_upper:
-        chars += string.ascii_uppercase
-    if use_lower:
-        chars += string.ascii_lowercase
-    if use_digits:
-        chars += string.digits
-    if use_symbols:
-        chars += string.punctuation
+# ---------- PASSWORD LOGIC ----------
+def generate_password(length, upper, lower, digits, symbols, exclude_similar):
+    sets = []
 
-    if chars == "":
+    U = string.ascii_uppercase
+    L = string.ascii_lowercase
+    D = string.digits
+    S = string.punctuation
+
+    if exclude_similar:
+        for c in "O0l1I":
+            U = U.replace(c, "")
+            L = L.replace(c, "")
+            D = D.replace(c, "")
+
+    if upper: sets.append(U)
+    if lower: sets.append(L)
+    if digits: sets.append(D)
+    if symbols: sets.append(S)
+
+    if not sets:
         return ""
 
-    return ''.join(random.choice(chars) for _ in range(length))
+    all_chars = "".join(sets)
 
+    # Enforce at least one from each selected set
+    password = [secrets.choice(s) for s in sets]
+
+    while len(password) < length:
+        password.append(secrets.choice(all_chars))
+
+    secrets.SystemRandom().shuffle(password)
+    return "".join(password)
+
+def password_strength(pwd):
+    score = 0
+    if len(pwd) >= 8: score += 1
+    if len(pwd) >= 12: score += 1
+    if any(c.isupper() for c in pwd): score += 1
+    if any(c.islower() for c in pwd): score += 1
+    if any(c.isdigit() for c in pwd): score += 1
+    if any(not c.isalnum() for c in pwd): score += 1
+
+    if score <= 2:
+        return "Weak"
+    elif score <= 4:
+        return "Medium"
+    else:
+        return "Strong"
+
+# ---------- ROUTES ----------
 @app.route("/", methods=["GET", "POST"])
 def index():
     password = ""
+    strength = ""
     history = []
 
     if request.method == "POST":
-        length = int(request.form.get("length"))
+        length = int(request.form.get("length", 12))
+
         password = generate_password(
             length,
             "upper" in request.form,
             "lower" in request.form,
             "digits" in request.form,
-            "symbols" in request.form
+            "symbols" in request.form,
+            "exclude" in request.form
         )
 
         if password:
-            conn = sqlite3.connect("passwords.db")
-            cur = conn.cursor()
-            cur.execute("INSERT INTO passwords (password) VALUES (?)", (password,))
-            conn.commit()
+            strength = password_strength(password)
 
-            # Keep only last 5 passwords
-            cur.execute("""
-                DELETE FROM passwords
-                WHERE id NOT IN (
-                    SELECT id FROM passwords ORDER BY id DESC LIMIT 5
+            with get_db() as conn:
+                conn.execute(
+                    "INSERT INTO passwords (password) VALUES (?)",
+                    (password,)
                 )
-            """)
-            conn.commit()
-            conn.close()
 
-    conn = sqlite3.connect("passwords.db")
-    cur = conn.cursor()
-    cur.execute("SELECT password FROM passwords ORDER BY id DESC")
-    history = cur.fetchall()
-    conn.close()
+                # Keep only last 5 passwords
+                conn.execute("""
+                    DELETE FROM passwords
+                    WHERE id NOT IN (
+                        SELECT id FROM passwords ORDER BY id DESC LIMIT 5
+                    )
+                """)
 
-    return render_template("index.html", password=password, history=history)
+    with get_db() as conn:
+        history = conn.execute(
+            "SELECT password FROM passwords ORDER BY id DESC"
+        ).fetchall()
 
+    return render_template(
+        "index.html",
+        password=password,
+        strength=strength,
+        history=history
+    )
+
+# ---------- OPTIONAL API ----------
+@app.route("/api/generate", methods=["POST"])
+def api_generate():
+    data = request.json
+
+    pwd = generate_password(
+        data["length"],
+        data["uppercase"],
+        data["lowercase"],
+        data["digits"],
+        data["symbols"],
+        data.get("excludeSimilar", False)
+    )
+
+    return jsonify({
+        "password": pwd,
+        "strength": password_strength(pwd)
+    })
+
+# ---------- RUN ----------
 if __name__ == "__main__":
     app.run(debug=True)
