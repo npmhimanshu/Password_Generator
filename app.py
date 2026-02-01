@@ -9,44 +9,71 @@ app = Flask(__name__)
 def init_db():
     conn = sqlite3.connect("passwords.db")
     cur = conn.cursor()
-    cur.execute("CREATE TABLE IF NOT EXISTS history (password TEXT)")
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS passwords (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            password TEXT
+        )
+    """)
     conn.commit()
     conn.close()
 
 init_db()
 
+def generate_password(length, use_upper, use_lower, use_digits, use_symbols):
+    chars = ""
+    if use_upper:
+        chars += string.ascii_uppercase
+    if use_lower:
+        chars += string.ascii_lowercase
+    if use_digits:
+        chars += string.digits
+    if use_symbols:
+        chars += string.punctuation
+
+    if chars == "":
+        return ""
+
+    return ''.join(random.choice(chars) for _ in range(length))
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     password = ""
-    chars = ""
+    history = []
 
     if request.method == "POST":
-        length = int(request.form["length"])
+        length = int(request.form.get("length"))
+        password = generate_password(
+            length,
+            "upper" in request.form,
+            "lower" in request.form,
+            "digits" in request.form,
+            "symbols" in request.form
+        )
 
-        if request.form.get("upper"):
-            chars += string.ascii_uppercase
-        if request.form.get("lower"):
-            chars += string.ascii_lowercase
-        if request.form.get("digits"):
-            chars += string.digits
-        if request.form.get("symbols"):
-            chars += string.punctuation
+        if password:
+            conn = sqlite3.connect("passwords.db")
+            cur = conn.cursor()
+            cur.execute("INSERT INTO passwords (password) VALUES (?)", (password,))
+            conn.commit()
 
-        password = ''.join(random.choice(chars) for _ in range(length))
-
-        conn = sqlite3.connect("passwords.db")
-        cur = conn.cursor()
-        cur.execute("INSERT INTO history VALUES (?)", (password,))
-        conn.commit()
-        conn.close()
+            # Keep only last 5 passwords
+            cur.execute("""
+                DELETE FROM passwords
+                WHERE id NOT IN (
+                    SELECT id FROM passwords ORDER BY id DESC LIMIT 5
+                )
+            """)
+            conn.commit()
+            conn.close()
 
     conn = sqlite3.connect("passwords.db")
     cur = conn.cursor()
-    cur.execute("SELECT password FROM history ORDER BY ROWID DESC LIMIT 5")
-    history = [row[0] for row in cur.fetchall()]
+    cur.execute("SELECT password FROM passwords ORDER BY id DESC")
+    history = cur.fetchall()
     conn.close()
 
     return render_template("index.html", password=password, history=history)
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=8000, debug=True)
+    app.run(debug=True)
