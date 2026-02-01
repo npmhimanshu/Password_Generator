@@ -5,41 +5,88 @@
     <title>Password Generator</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
+<body class="light">
 
 <div class="container">
     <h1>🔐 Password Generator</h1>
 
-    <form method="POST">
-        <label>Password Length</label>
-        <input type="number" name="length" min="4" max="32" value="12" required>
+    <div class="controls">
+        <label>Length:
+            <input type="number" id="length" min="4" max="32" value="12">
+        </label>
 
         <div class="options">
-            <label><input type="checkbox" name="upper" checked> Uppercase</label>
-            <label><input type="checkbox" name="lower" checked> Lowercase</label>
-            <label><input type="checkbox" name="digits" checked> Numbers</label>
-            <label><input type="checkbox" name="symbols"> Special Characters</label>
+            <label><input type="checkbox" id="upper" checked> Uppercase</label>
+            <label><input type="checkbox" id="lower" checked> Lowercase</label>
+            <label><input type="checkbox" id="digits" checked> Numbers</label>
+            <label><input type="checkbox" id="symbols"> Symbols</label>
+            <label><input type="checkbox" id="exclude"> Exclude O,0,l,1,I</label>
         </div>
 
-        <button type="submit">Generate Password</button>
-    </form>
+        <button onclick="generatePassword()">Generate</button>
+        <button onclick="toggleMode()">🌙 Dark/Light</button>
+    </div>
 
-    {% if password %}
-        <div class="output">
-            <h3>Generated Password</h3>
-            <p>{{ password }}</p>
+    <div class="output" id="output" style="display:none;">
+        <h3>Generated Password</h3>
+        <p id="password" class="password hidden"></p>
+
+        <p class="strength">Strength: <span id="strength"></span></p>
+        <p class="entropy">Entropy: <span id="entropy"></span> bits</p>
+
+        <div class="actions">
+            <button onclick="togglePassword()">👁 Show / Hide</button>
+            <button onclick="copyPassword()">📋 Copy</button>
         </div>
-    {% endif %}
+    </div>
 
     <div class="history">
         <h3>Last 5 Passwords</h3>
-        <ul>
-            {% for item in history %}
-                <li>{{ item[0] }}</li>
-            {% endfor %}
-        </ul>
+        <ul id="history"></ul>
     </div>
 </div>
+
+<script>
+async function generatePassword() {
+    const res = await fetch("/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            length: +document.getElementById("length").value,
+            upper: document.getElementById("upper").checked,
+            lower: document.getElementById("lower").checked,
+            digits: document.getElementById("digits").checked,
+            symbols: document.getElementById("symbols").checked,
+            excludeSimilar: document.getElementById("exclude").checked
+        })
+    });
+    const data = await res.json();
+
+    document.getElementById("output").style.display = "block";
+    document.getElementById("password").innerText = data.password;
+    document.getElementById("strength").innerText = data.strength;
+    document.getElementById("strength").className = data.strength.toLowerCase();
+    document.getElementById("entropy").innerText = data.entropy;
+
+    const history = document.getElementById("history");
+    history.innerHTML = "";
+    data.history.forEach(p => history.innerHTML += `<li>${p}</li>`);
+}
+
+function copyPassword() {
+    navigator.clipboard.writeText(document.getElementById("password").innerText);
+    alert("Copied!");
+}
+
+function togglePassword() {
+    document.getElementById("password").classList.toggle("hidden");
+}
+
+function toggleMode() {
+    document.body.classList.toggle("dark");
+    document.body.classList.toggle("light");
+}
+</script>
 
 </body>
 </html>
