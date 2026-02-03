@@ -1,92 +1,103 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Password Generator</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<meta charset="UTF-8">
+<title>Password Generator + AI</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #0f172a;
+    color: #e5e7eb;
+    padding: 40px;
+}
+.container {
+    max-width: 500px;
+    margin: auto;
+    background: #1e293b;
+    padding: 25px;
+    border-radius: 10px;
+}
+input, button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+}
+.result, .ai-box {
+    background: #020617;
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+    word-break: break-all;
+}
+.history {
+    font-size: 0.9em;
+    opacity: 0.8;
+}
+</style>
 </head>
-<body class="light">
 
+<body>
 <div class="container">
-    <h1>🔐 Password Generator</h1>
+<h2>🔐 Password Generator</h2>
 
-    <div class="controls">
-        <label>Length:
-            <input type="number" id="length" min="4" max="32" value="12">
-        </label>
+<label>Password Length</label>
+<input type="number" id="length" value="12" min="4">
 
-        <div class="options">
-            <label><input type="checkbox" id="upper" checked> Uppercase</label>
-            <label><input type="checkbox" id="lower" checked> Lowercase</label>
-            <label><input type="checkbox" id="digits" checked> Numbers</label>
-            <label><input type="checkbox" id="symbols"> Symbols</label>
-            <label><input type="checkbox" id="exclude"> Exclude O,0,l,1,I</label>
-        </div>
+<label>
+<input type="checkbox" id="excludeSimilar">
+Exclude similar characters
+</label>
 
-        <button onclick="generatePassword()">Generate</button>
-        <button onclick="toggleMode()">🌙 Dark/Light</button>
-    </div>
+<button onclick="generatePassword()">Generate</button>
 
-    <div class="output" id="output" style="display:none;">
-        <h3>Generated Password</h3>
-        <p id="password" class="password hidden"></p>
+<div class="result" id="passwordBox"></div>
+<div id="info"></div>
 
-        <p class="strength">Strength: <span id="strength"></span></p>
-        <p class="entropy">Entropy: <span id="entropy"></span> bits</p>
+<button onclick="analyzeAI()">🤖 Analyze with AI</button>
+<div class="ai-box" id="aiResult"></div>
 
-        <div class="actions">
-            <button onclick="togglePassword()">👁 Show / Hide</button>
-            <button onclick="copyPassword()">📋 Copy</button>
-        </div>
-    </div>
-
-    <div class="history">
-        <h3>Last 5 Passwords</h3>
-        <ul id="history"></ul>
-    </div>
+<h3>History</h3>
+<div class="history" id="history"></div>
 </div>
 
 <script>
 async function generatePassword() {
+    const length = document.getElementById("length").value;
+    const excludeSimilar = document.getElementById("excludeSimilar").checked;
+
     const res = await fetch("/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            length: +document.getElementById("length").value,
-            upper: document.getElementById("upper").checked,
-            lower: document.getElementById("lower").checked,
-            digits: document.getElementById("digits").checked,
-            symbols: document.getElementById("symbols").checked,
-            excludeSimilar: document.getElementById("exclude").checked
-        })
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ length, excludeSimilar })
     });
+
     const data = await res.json();
 
-    document.getElementById("output").style.display = "block";
-    document.getElementById("password").innerText = data.password;
-    document.getElementById("strength").innerText = data.strength;
-    document.getElementById("strength").className = data.strength.toLowerCase();
-    document.getElementById("entropy").innerText = data.entropy;
+    document.getElementById("passwordBox").innerText = data.password;
+    document.getElementById("info").innerText =
+        `Strength: ${data.strength} | Entropy: ${data.entropy} bits`;
 
-    const history = document.getElementById("history");
-    history.innerHTML = "";
-    data.history.forEach(p => history.innerHTML += `<li>${p}</li>`);
+    document.getElementById("history").innerHTML =
+        data.history.map(p => `• ${p}`).join("<br>");
+
+    document.getElementById("aiResult").innerText = "";
 }
 
-function copyPassword() {
-    navigator.clipboard.writeText(document.getElementById("password").innerText);
-    alert("Copied!");
-}
+async function analyzeAI() {
+    const password = document.getElementById("passwordBox").innerText;
+    if (!password) return alert("Generate a password first!");
 
-function togglePassword() {
-    document.getElementById("password").classList.toggle("hidden");
-}
+    document.getElementById("aiResult").innerText = "Analyzing... 🤖";
 
-function toggleMode() {
-    document.body.classList.toggle("dark");
-    document.body.classList.toggle("light");
+    const res = await fetch("/ai-analyze", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ password })
+    });
+
+    const data = await res.json();
+    document.getElementById("aiResult").innerText = data.analysis;
 }
 </script>
-
 </body>
 </html>
