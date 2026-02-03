@@ -3,28 +3,34 @@ import secrets
 import string
 import sqlite3
 import math
+import requests
 
 app = Flask(__name__)
 DB_NAME = "passwords.db"
 
+# 🔑 OpenRouter Config
+OPENROUTER_API_KEY = "YOUR_OPENROUTER_API_KEY"
+OPENROUTER_MODEL = "openai/gpt-3.5-turbo"
+
 # ---------- DATABASE ----------
 def get_db():
-    return sqlite3.connect(DB_NAME)
+    return sqlite3.connect(DB_NAME, check_same_thread=False)
 
 def init_db():
     with get_db() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS passwords (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                password TEXT
+                password TEXT NOT NULL
             )
         """)
 
 init_db()
 
 # ---------- PASSWORD LOGIC ----------
-def generate_password(length, upper, lower, digits, symbols, exclude_similar):
-    sets = []
+def generate_password(length, exclude_similar=False):
+    if length < 4:
+        raise ValueError("Password length must be at least 4")
 
     U = string.ascii_uppercase
     L = string.ascii_lowercase
@@ -37,18 +43,14 @@ def generate_password(length, upper, lower, digits, symbols, exclude_similar):
             L = L.replace(c, "")
             D = D.replace(c, "")
 
-    if upper: sets.append(U)
-    if lower: sets.append(L)
-    if digits: sets.append(D)
-    if symbols: sets.append(S)
+    password = [
+        secrets.choice(U),
+        secrets.choice(L),
+        secrets.choice(D),
+        secrets.choice(S)
+    ]
 
-    if not sets:
-        return ""
-
-    all_chars = "".join(sets)
-
-    # Ensure at least one from each selected set
-    password = [secrets.choice(s) for s in sets]
+    all_chars = U + L + D + S
 
     while len(password) < length:
         password.append(secrets.choice(all_chars))
@@ -69,62 +71,8 @@ def password_strength(pwd):
     elif score <= 4: return "Medium"
     return "Strong"
 
-def password_entropy(pwd, upper, lower, digits, symbols):
+def password_entropy(pwd, exclude_similar):
     pool = 0
-    if upper: pool += len(string.ascii_uppercase)
-    if lower: pool += len(string.ascii_lowercase)
-    if digits: pool += len(string.digits)
-    if symbols: pool += len(string.punctuation)
-    if pool == 0: return 0
-    return round(math.log2(pool ** len(pwd)), 2)
-
-# ---------- ROUTES ----------
-@app.route("/")
-def index():
-    return render_template("index.html")
-
-@app.route("/generate", methods=["POST"])
-def generate_api():
-    data = request.json
-
-    password = generate_password(
-        data.get("length", 12),
-        data.get("upper", True),
-        data.get("lower", True),
-        data.get("digits", True),
-        data.get("symbols", False),
-        data.get("excludeSimilar", False)
-    )
-
-    strength = password_strength(password)
-    entropy = password_entropy(
-        password,
-        data.get("upper", True),
-        data.get("lower", True),
-        data.get("digits", True),
-        data.get("symbols", False)
-    )
-
-    # Save and maintain history
-    with get_db() as conn:
-        conn.execute("INSERT INTO passwords (password) VALUES (?)", (password,))
-        conn.execute("""
-            DELETE FROM passwords
-            WHERE id NOT IN (
-                SELECT id FROM passwords ORDER BY id DESC LIMIT 5
-            )
-        """)
-        history = conn.execute(
-            "SELECT password FROM passwords ORDER BY id DESC LIMIT 5"
-        ).fetchall()
-
-    return jsonify({
-        "password": password,
-        "strength": strength,
-        "entropy": entropy,
-        "history": [h[0] for h in history]
-    })
-
-# ---------- RUN ----------
-if __name__ == "__main__":
-    app.run(debug=True)
+    pool += len(string.ascii_uppercase.replace("O", "").replace("I", "")) if exclude_similar else len(string.ascii_uppercase)
+    pool += len(string.ascii_lowercase.replace("l", "")) if exclude_similar else len(string.ascii_lowercase)
+    pool += len(string.digits.replace("0", "").replace("1", "")) if excl
